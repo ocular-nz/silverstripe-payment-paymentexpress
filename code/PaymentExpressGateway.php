@@ -38,7 +38,12 @@ class PaymentExpressGateway_PxPay extends PaymentGateway_GatewayHosted {
 
     //Set PxPay properties
     if (isset($data['Reference'])) $request->setMerchantReference($data['Reference']);
-		if (isset($data['EmailAddress'])) $request->setEmailAddress($data['EmailAddress']);
+	if (isset($data['EmailAddress'])) $request->setEmailAddress($data['EmailAddress']);
+
+	//Set TxnData for custom fields
+	if (isset($data['TxnData1'])) $request->setTxnData1($data['TxnData1']);
+	if (isset($data['TxnData2'])) $request->setTxnData2($data['TxnData2']);
+	if (isset($data['TxnData3'])) $request->setTxnData3($data['TxnData3']);
 
     $request->setUrlFail($this->cancelURL);
     $request->setUrlSuccess($this->returnURL);
