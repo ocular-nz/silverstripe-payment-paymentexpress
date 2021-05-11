@@ -37,6 +37,7 @@ class PaymentExpressGateway_PxPay extends PaymentGateway_GatewayHosted {
     $request->setCurrencyInput($data['Currency']);
 
     //Set PxPay properties
+	if (isset($data['EnableAddBillCard'])) $request->setEnableAddBillCard($data['EnableAddBillCard']);
     if (isset($data['Reference'])) $request->setMerchantReference($data['Reference']);
 	if (isset($data['EmailAddress'])) $request->setEmailAddress($data['EmailAddress']);
 
@@ -50,7 +51,7 @@ class PaymentExpressGateway_PxPay extends PaymentGateway_GatewayHosted {
 
     //Generate a unique identifier for the transaction
     $request->setTxnId(uniqid('ID')); 
-    $request->setTxnType('Purchase');
+    $request->setTxnType('Auth');
     
     //Get encrypted URL from DPS to redirect the user to
     $request_string = $this->makeProcessRequest($request, $data);
@@ -95,6 +96,7 @@ class PaymentExpressGateway_PxPay extends PaymentGateway_GatewayHosted {
 		$url = $request->getVar('url');
 		$result = $request->getVar('result');
 		$userID = $request->getVar('userid');
+		$paymentID = $request->param('OtherID');
 		
 		//Construct the request to check the payment status
     $request = new PxPayLookupRequest();
@@ -108,6 +110,19 @@ class PaymentExpressGateway_PxPay extends PaymentGateway_GatewayHosted {
     
     //Parse output XML
     $success = $response->get_element_text('Success');
+	$DPStnxid = $response->get_element_text('DpsTxnRef');
+		
+	// get payment object
+	$rp = Payment::get()->byId($paymentID);
+
+	// get billing id and add to member
+	$dpsBillingId = $response->get_element_text('DpsBillingId');
+	$rp->PaidBy()->WindcaveBillingId = $dpsBillingId;
+	$rp->PaidBy()->write();
+
+	// attach ref to payment object
+	$rp->DPSReference = $DPStnxid;
+	$rp->write();
 
     if ($success && is_numeric($success) && $success > 0) {
     	return new PaymentGateway_Success();
