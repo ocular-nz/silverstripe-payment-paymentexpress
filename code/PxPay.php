@@ -19,7 +19,7 @@ class MifMessage
   # Constructor:
   # Create a MifMessage with the specified XML text.
   # The constructor returns a null object if there is a parsing error.
-  function MifMessage($xml)
+  public function __construct($xml)
   {
     $p = xml_parser_create();
     xml_parser_set_option($p,XML_OPTION_CASE_FOLDING,0);
@@ -119,7 +119,7 @@ class PxPay_Curl
 	var $PxPay_Key;
 	var $PxPay_Url;
 	var $PxPay_Userid;
-	function PxPay_Curl($Url, $UserId, $Key){
+	public function __construct($Url, $UserId, $Key){
 		error_reporting(E_ERROR);
 		$this->PxPay_Key = $Key;
 		$this->PxPay_Url = $Url;
@@ -199,7 +199,7 @@ class PxPayRequest extends PxPayMessage
 	
 	
 	#Constructor
- 	function PxPayRequest(){
+ 	public function __construct(){
 		$this->PxPayMessage();
 		
 	}
@@ -277,7 +277,7 @@ class PxPayLookupRequest extends PxPayMessage
 	var $PxPayKey;
 	
 	#Constructor
- 	function PxPayRequest(){
+ 	public function __construct(){
 		$this->PxPayMessage();
 	}
 	
@@ -326,7 +326,7 @@ class PxPayMessage {
   	var $BillingId;
 	var $TxnId;
 	
-	function PxPayMessage(){
+	public function __construct(){
 	
 	}
 
@@ -421,7 +421,7 @@ class PxPayResponse extends PxPayMessage
 	var $ResponseText;
 
  
-	function PxPayResponse($xml){
+	public function __construct($xml){
 		$msg = new MifMessage($xml);
 		$this->PxPayMessage();
 		
@@ -491,5 +491,3 @@ class PxPayResponse extends PxPayMessage
 		return $this->ResponseText;
 	}
 }
-
-?>
