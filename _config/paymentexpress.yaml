@@ -1,0 +1,15 @@
+---
+Name: PaymentExpress
+---
+Payment\PaymentFactory:
+  PaymentExpressPxPay:
+    title: 'Payment Express PxPay'
+    gateway_classes:
+      live: 'PaymentExpress\PaymentExpressGateway_PxPay'
+      dev: 'PaymentExpress\PaymentExpressGateway_PxPay'
+      test: 'PaymentExpress\PaymentExpressGateway_PxPay_Mock'
+    processor: 'PaymentExpress\PaymentProcessor_GatewayHosted'
+    model: 'Payment\Payment'
+
+PaymentExpress\PaymentExpressGateway_PxPay:
+  url: 'https://sec.paymentexpress.com/pxpay/pxaccess.aspx'

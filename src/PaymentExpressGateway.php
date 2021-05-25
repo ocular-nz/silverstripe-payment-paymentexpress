@@ -9,6 +9,7 @@ use Payment\PaymentGateway_GatewayHosted;
 use Payment\PaymentGateway_Incomplete;
 use Payment\PaymentGateway_Success;
 use SilverStripe\Control\Controller;
+use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Core\Config\Config;
 
 class PaymentExpressGateway_PxPay extends PaymentGateway_GatewayHosted
@@ -100,12 +101,11 @@ class PaymentExpressGateway_PxPay extends PaymentGateway_GatewayHosted
 	/**
 	 * Check that the payment was successful using "Process Response" API (http://www.paymentexpress.com/Technical_Resources/Ecommerce_Hosted/PxPay.aspx).
 	 * 
-	 * @param SS_HTTPRequest $request Request from the gateway - transaction response
+	 * @param HTTPRequest $request Request from the gateway - transaction response
 	 * @return PaymentGateway_Result
 	 */
 	public function check($request)
 	{
-
 		$data = $request->getVars();
 
 		$url = $request->getVar('url');
