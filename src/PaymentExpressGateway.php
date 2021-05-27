@@ -10,7 +10,6 @@ use Payment\PaymentGateway_Incomplete;
 use Payment\PaymentGateway_Success;
 use SilverStripe\Control\Controller;
 use SilverStripe\Control\HTTPRequest;
-use SilverStripe\Core\Config\Config;
 
 class PaymentExpressGateway_PxPay extends PaymentGateway_GatewayHosted
 {
@@ -18,6 +17,21 @@ class PaymentExpressGateway_PxPay extends PaymentGateway_GatewayHosted
 	protected $pxPayUrl;
 	protected $pxPayUserID;
 	protected $pxPayKey;
+
+	public function setPxPayUrl($pxPayUrl)
+	{
+		$this->pxPayUrl = $pxPayUrl;
+	}
+
+	public function setPxPayUserID($pxPayUserID)
+	{
+		$this->pxPayUserID = $pxPayUserID;
+	}
+
+	public function setPxPayKey($pxPayKey)
+	{
+		$this->pxPayKey = $pxPayKey;
+	}
 
 	protected $supportedCurrencies = array(
 		'NZD' => 'New Zealand Dollar',
@@ -37,11 +51,11 @@ class PaymentExpressGateway_PxPay extends PaymentGateway_GatewayHosted
 
 	protected function onBeforeMakeRequest()
 	{
-		$config = $this->getConfig();
+		// $config = $this->getConfig();
 
-		$this->pxPayUrl    = Config::inst()->get('PaymentExpressGateway_PxPay', 'url');
-		$this->pxPayUserID = $config['authentication']['user_id'];
-		$this->pxPayKey    = $config['authentication']['key'];
+		// $this->pxPayUrl    = Config::inst()->get('PaymentExpressGateway_PxPay', 'url');
+		// $this->pxPayUserID = $config['authentication']['user_id'];
+		// $this->pxPayKey    = $config['authentication']['key'];
 	}
 
 	public function process($data)

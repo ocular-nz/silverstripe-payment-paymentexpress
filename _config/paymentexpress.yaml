@@ -8,7 +8,7 @@ Payment\PaymentFactory:
       live: 'PaymentExpress\PaymentExpressGateway_PxPay'
       dev: 'PaymentExpress\PaymentExpressGateway_PxPay'
       test: 'PaymentExpress\PaymentExpressGateway_PxPay_Mock'
-    processor: 'PaymentExpress\PaymentProcessor_GatewayHosted'
+    processor: 'Payment\PaymentProcessor_GatewayHosted'
     model: 'Payment\Payment'
 
 PaymentExpress\PaymentExpressGateway_PxPay:

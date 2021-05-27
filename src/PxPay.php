@@ -120,6 +120,7 @@ class PxPay_Curl
 		$this->PxPay_Key = $Key;
 		$this->PxPay_Url = $Url;
 		$this->PxPay_Userid = $UserId;
+
 	}
 
 	#******************************************************************************
@@ -197,7 +198,7 @@ class PxPayRequest extends PxPayMessage
 	#Constructor
 	public function __construct()
 	{
-		$this->PxPayMessage();
+		parent::__construct();
 	}
 
 	function setEnableAddBillCard($EnableBillAddCard)
@@ -282,7 +283,7 @@ class PxPayLookupRequest extends PxPayMessage
 	#Constructor
 	public function __construct()
 	{
-		$this->PxPayMessage();
+		parent::__construct();
 	}
 
 	function setResponse($Response)
@@ -450,7 +451,7 @@ class PxPayResponse extends PxPayMessage
 	public function __construct($xml)
 	{
 		$msg = new MifMessage($xml);
-		$this->PxPayMessage();
+		parent::__construct($xml);
 
 		$this->Success = $msg->get_element_text("Success");
 		$this->setTxnType($msg->get_element_text("TxnType"));
