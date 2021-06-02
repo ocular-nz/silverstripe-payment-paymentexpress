@@ -18,6 +18,12 @@ class PaymentExpressGateway_PxPay extends PaymentGateway_GatewayHosted
 	protected $pxPayUserID;
 	protected $pxPayKey;
 
+	protected $supportedCurrencies = array(
+		'NZD' => 'New Zealand Dollar',
+		'USD' => 'United States Dollar',
+		'GBP' => 'Great British Pound'
+	);
+
 	public function setPxPayUrl($pxPayUrl)
 	{
 		$this->pxPayUrl = $pxPayUrl;
@@ -33,12 +39,6 @@ class PaymentExpressGateway_PxPay extends PaymentGateway_GatewayHosted
 		$this->pxPayKey = $pxPayKey;
 	}
 
-	protected $supportedCurrencies = array(
-		'NZD' => 'New Zealand Dollar',
-		'USD' => 'United States Dollar',
-		'GBP' => 'Great British Pound'
-	);
-
 	public function getSupportedCurrencies()
 	{
 
@@ -47,15 +47,6 @@ class PaymentExpressGateway_PxPay extends PaymentGateway_GatewayHosted
 			$this->supportedCurrencies = $config['supported_currencies'];
 		}
 		return $this->supportedCurrencies;
-	}
-
-	protected function onBeforeMakeRequest()
-	{
-		// $config = $this->getConfig();
-
-		// $this->pxPayUrl    = Config::inst()->get('PaymentExpressGateway_PxPay', 'url');
-		// $this->pxPayUserID = $config['authentication']['user_id'];
-		// $this->pxPayKey    = $config['authentication']['key'];
 	}
 
 	public function process($data)
@@ -106,8 +97,6 @@ class PaymentExpressGateway_PxPay extends PaymentGateway_GatewayHosted
 
 	public function makeProcessRequest($request, $data)
 	{
-
-		$this->onBeforeMakeRequest();
 		$pxpay = new PxPay_Curl($this->pxPayUrl, $this->pxPayUserID, $this->pxPayKey);
 		return $pxpay->makeRequest($request);
 	}
@@ -164,8 +153,6 @@ class PaymentExpressGateway_PxPay extends PaymentGateway_GatewayHosted
 
 	public function makeCheckRequest($request, $data)
 	{
-
-		$this->onBeforeMakeRequest();
 		$pxpay = new PxPay_Curl($this->pxPayUrl, $this->pxPayUserID, $this->pxPayKey);
 		return $pxpay->makeRequest($request);
 	}
@@ -176,9 +163,6 @@ class PaymentExpressGateway_PxPay_Mock extends PaymentExpressGateway_PxPay
 
 	public function makeProcessRequest($request, $data)
 	{
-
-		$this->onBeforeMakeRequest();
-
 		//Mock request string
 		$mock = isset($data['mock']) ? $data['mock'] : false;
 		if ($mock) {
