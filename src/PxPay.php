@@ -312,8 +312,9 @@ class PxPayLookupRequest extends PxPayMessage
 		$arr = get_object_vars($this);
 
 		$xml  = "<ProcessResponse>";
-		while (list($prop, $val) = each($arr))
+		foreach ($arr as $prop => $val) {
 			$xml .= "<$prop>$val</$prop>";
+		}
 
 		$xml .= "</ProcessResponse>";
 		return $xml;
@@ -419,9 +420,9 @@ class PxPayMessage
 		$arr = get_object_vars($this);
 
 		$xml  = "<GenerateRequest>";
-		while (list($prop, $val) = each($arr))
+		foreach ($arr as $prop => $val) {
 			$xml .= "<$prop>$val</$prop>";
-
+		}
 		$xml .= "</GenerateRequest>";
 		return $xml;
 	}
