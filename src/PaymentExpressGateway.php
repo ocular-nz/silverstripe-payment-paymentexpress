@@ -8,8 +8,10 @@ use Payment\PaymentGateway_Failure;
 use Payment\PaymentGateway_GatewayHosted;
 use Payment\PaymentGateway_Incomplete;
 use Payment\PaymentGateway_Success;
+use Psr\Log\LoggerInterface;
 use SilverStripe\Control\Controller;
 use SilverStripe\Control\HTTPRequest;
+use SilverStripe\Core\Injector\Injector;
 
 class PaymentExpressGateway_PxPay extends PaymentGateway_GatewayHosted
 {
@@ -123,6 +125,8 @@ class PaymentExpressGateway_PxPay extends PaymentGateway_GatewayHosted
 		//Get encrypted URL from DPS to redirect the user to
 		$request_string = $this->makeCheckRequest($request, $data);
 
+		Injector::inst()->get(LoggerInterface::class)->debug('PxPay check response: ' . $request_string);
+
 		//Obtain output XML
 		$response = new MifMessage($request_string);
 
@@ -135,8 +139,18 @@ class PaymentExpressGateway_PxPay extends PaymentGateway_GatewayHosted
 
 		// get billing id and add to member
 		$dpsBillingId = $response->get_element_text('DpsBillingId');
-		$rp->PaidBy()->WindcaveBillingId = $dpsBillingId;
-		$rp->PaidBy()->write();
+
+		if ($dpsBillingId) {
+			// DPS billing id is only set for recurring payments, null otherwise
+			if ($success) {
+				$rp->PaidBy()->WindcaveBillingId = $dpsBillingId;
+			} else {
+				// if payment failed, remove billing id to make it obvious there was a failure
+				$rp->PaidBy()->WindcaveBillingId = null;
+			}
+
+			$rp->PaidBy()->write();
+		}
 
 		// attach ref to payment object
 		$rp->DPSReference = $DPStnxid;
@@ -145,7 +159,10 @@ class PaymentExpressGateway_PxPay extends PaymentGateway_GatewayHosted
 		if ($success && is_numeric($success) && $success > 0) {
 			return new PaymentGateway_Success();
 		} else if (is_numeric($success) && $success == 0) {
-			return new PaymentGateway_Failure();
+			$failureText = $response->get_element_text('CardHolderHelpText');
+			$failure = new PaymentGateway_Failure();
+			$failure->addError($failureText);
+			return $failure;
 		} else {
 			return new PaymentGateway_Incomplete();
 		}
