@@ -13,7 +13,7 @@
 	],
 	"require": {
 		"silverstripe/recipe-cms": "^5.0|^6.0",
-		"silverstripe/payment": "dev-v5"
+		"silverstripe/payment": "v5.x-dev"
 	},
 	"repositories": [
 		{
