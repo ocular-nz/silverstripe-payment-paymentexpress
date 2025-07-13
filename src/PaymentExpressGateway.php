@@ -256,16 +256,6 @@ class PaymentExpressGateway_PxPay extends PaymentGateway_GatewayHosted
         $dpsBillingId = $response->get_element_text('DpsBillingId');
 
         if ($dpsBillingId) {
-            // DPS billing id is only set for recurring payments, null otherwise
-            if ($success) {
-                $rp->PaidBy()->WindcaveBillingId = $dpsBillingId;
-            } else {
-                // if payment failed, remove billing id to make it obvious there was a failure
-                $rp->PaidBy()->WindcaveBillingId = null;
-            }
-
-            $rp->PaidBy()->write();
-
             // Save card details if this was a successful payment with billing ID
             if ($success) {
                 $this->saveCardFromResponse($response, $rp);
@@ -310,10 +300,17 @@ class PaymentExpressGateway_PxPay extends PaymentGateway_GatewayHosted
             return;
         }
 
+        // Check if this is a card update request
+        $updateCardId = null;
+        if (str_contains($payment->Reference, 'Update Card #')) {
+            $updateCardId = (int)str_replace('Update Card #', '', $payment->Reference);
+        }
+
         $savedCardService = Injector::inst()->get(SavedCardService::class);
         $savedCard = $savedCardService->saveCardFromResponse(
             response: $response,
-            member: $member
+            member: $member,
+            updateCardId: $updateCardId
         );
 
         // If this payment is for a standing order, link the saved card to it
