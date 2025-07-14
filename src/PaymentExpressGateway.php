@@ -259,6 +259,13 @@ class PaymentExpressGateway_PxPay extends PaymentGateway_GatewayHosted
             // Save card details if this was a successful payment with billing ID
             if ($success) {
                 $this->saveCardFromResponse($response, $rp);
+            } else {
+                // Check if this was a card update attempt that failed
+                if (str_contains($rp->Reference, 'Update Card #')) {
+                    $session = Injector::inst()->get(HTTPRequest::class)->getSession();
+                    $failureText = $response->get_element_text('CardHolderHelpText') ?: 'Card update failed';
+                    $session->set('SavedCards.Message', "Card update failed: {$failureText}");
+                }
             }
         }
 
@@ -270,6 +277,13 @@ class PaymentExpressGateway_PxPay extends PaymentGateway_GatewayHosted
             return new PaymentGateway_Success();
         } else if (is_numeric($success) && $success == 0) {
             $failureText = $response->get_element_text('CardHolderHelpText');
+            
+            // Handle card update failures even if no billing ID
+            if (str_contains($rp->Reference, 'Update Card #')) {
+                $session = Injector::inst()->get(HTTPRequest::class)->getSession();
+                $session->set('SavedCards.Message', "Card update failed: {$failureText}");
+            }
+            
             $failure = new PaymentGateway_Failure();
             $failure->addError($failureText);
             return $failure;
@@ -312,6 +326,12 @@ class PaymentExpressGateway_PxPay extends PaymentGateway_GatewayHosted
             member: $member,
             updateCardId: $updateCardId
         );
+
+        // Set success message for card updates
+        if ($updateCardId && $savedCard) {
+            $session = Injector::inst()->get(HTTPRequest::class)->getSession();
+            $session->set('SavedCards.Message', 'Card updated successfully.');
+        }
 
         // If this payment is for a standing order, link the saved card to it
         if ($savedCard && $payment->OrderID) {
