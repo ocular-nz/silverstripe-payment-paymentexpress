@@ -20,7 +20,6 @@ use Payment\Payment_Error;
 
 class PaymentExpressGateway_PxPay extends PaymentGateway_GatewayHosted
 {
-
     protected $pxPayUrl;
     protected $pxPayUserID;
     protected $pxPayKey;
@@ -69,14 +68,26 @@ class PaymentExpressGateway_PxPay extends PaymentGateway_GatewayHosted
         $request->setCurrencyInput($data['Currency']);
 
         //Set PxPay properties
-        if (isset($data['EnableAddBillCard'])) $request->setEnableAddBillCard($data['EnableAddBillCard']);
-        if (isset($data['Reference'])) $request->setMerchantReference($data['Reference']);
-        if (isset($data['EmailAddress'])) $request->setEmailAddress($data['EmailAddress']);
+        if (isset($data['EnableAddBillCard'])) {
+            $request->setEnableAddBillCard($data['EnableAddBillCard']);
+        }
+        if (isset($data['Reference'])) {
+            $request->setMerchantReference($data['Reference']);
+        }
+        if (isset($data['EmailAddress'])) {
+            $request->setEmailAddress($data['EmailAddress']);
+        }
 
         //Set TxnData for custom fields
-        if (isset($data['TxnData1'])) $request->setTxnData1($data['TxnData1']);
-        if (isset($data['TxnData2'])) $request->setTxnData2($data['TxnData2']);
-        if (isset($data['TxnData3'])) $request->setTxnData3($data['TxnData3']);
+        if (isset($data['TxnData1'])) {
+            $request->setTxnData1($data['TxnData1']);
+        }
+        if (isset($data['TxnData2'])) {
+            $request->setTxnData2($data['TxnData2']);
+        }
+        if (isset($data['TxnData3'])) {
+            $request->setTxnData3($data['TxnData3']);
+        }
 
         $request->setUrlFail($this->cancelURL);
         $request->setUrlSuccess($this->returnURL);
@@ -99,7 +110,7 @@ class PaymentExpressGateway_PxPay extends PaymentGateway_GatewayHosted
         if ($valid && is_numeric($valid) && $valid == 1) {
             //Redirect to payment page
             Controller::curr()->redirect($url);
-        } else if (is_numeric($valid) && $valid == 0) {
+        } elseif (is_numeric($valid) && $valid == 0) {
             return new PaymentGateway_Failure();
         } else {
             return new PaymentGateway_Incomplete();
@@ -129,7 +140,7 @@ class PaymentExpressGateway_PxPay extends PaymentGateway_GatewayHosted
             $xml = new \SimpleXMLElement('<Txn/>');
             $xml->addChild('PostUsername', htmlspecialchars($fieldpineApi->pxPostUsername));
             $xml->addChild('PostPassword', htmlspecialchars($fieldpineApi->pxPostPassword));
-            $xml->addChild('TxnType', 'Purchase'); // Use Purchase for immediate capture
+            $xml->addChild('TxnType', 'Auth');
             $xml->addChild('InputCurrency', $data['Currency'] ?? 'NZD');
             $xml->addChild('Amount', sprintf('%.2f', $amount));
             $xml->addChild('DpsBillingId', htmlspecialchars($billingId));
@@ -275,15 +286,15 @@ class PaymentExpressGateway_PxPay extends PaymentGateway_GatewayHosted
 
         if ($success && is_numeric($success) && $success > 0) {
             return new PaymentGateway_Success();
-        } else if (is_numeric($success) && $success == 0) {
+        } elseif (is_numeric($success) && $success == 0) {
             $failureText = $response->get_element_text('CardHolderHelpText');
-            
+
             // Handle card update failures even if no billing ID
             if (str_contains($rp->Reference, 'Update Card #')) {
                 $session = Injector::inst()->get(HTTPRequest::class)->getSession();
                 $session->set('SavedCards.Message', "Card update failed: {$failureText}");
             }
-            
+
             $failure = new PaymentGateway_Failure();
             $failure->addError($failureText);
             return $failure;
@@ -346,7 +357,6 @@ class PaymentExpressGateway_PxPay extends PaymentGateway_GatewayHosted
 
 class PaymentExpressGateway_PxPay_Mock extends PaymentExpressGateway_PxPay
 {
-
     public function makeProcessRequest($request, $data)
     {
         //Mock request string
