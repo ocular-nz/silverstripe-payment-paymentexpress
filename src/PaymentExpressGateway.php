@@ -14,6 +14,10 @@ use SilverStripe\Control\HTTPRequest;
 use SilverStripe\Core\Injector\Injector;
 use App\Web\SavedCardService;
 use App\Web\FieldpineApi;
+use App\Web\AccountPageController;
+use App\Web\StandingOrderPlacementResult;
+use App\Web\StandingOrderPlacer;
+use SwipeStripe\Order\StandingOrder;
 use SwipeStripe\Order\Order;
 use GuzzleHttp\Client;
 use Payment\Payment_Error;
@@ -340,8 +344,24 @@ class PaymentExpressGateway_PxPay extends PaymentGateway_GatewayHosted
 
         // Set success message for card updates
         if ($updateCardId && $savedCard) {
+            $message = 'Card updated successfully.';
+
+            // retry any of today's failed standing orders that use this card
+            $standingOrders = StandingOrder::get()->filter([
+                'SavedCardID' => $savedCard->ID,
+                'MemberID' => $member->ID
+            ]);
+            foreach ($standingOrders as $standingOrder) {
+                $result = $this->retryStandingOrder($standingOrder);
+                if ($result?->isPlaced()) {
+                    $message .= " Your standing order \"{$standingOrder->CartName()}\" has been placed for delivery on {$standingOrder->CurrentDeliveryDateNice()}.";
+                } elseif ($result?->isFailed()) {
+                    $message .= " The payment for your standing order \"{$standingOrder->CartName()}\" was declined again.";
+                }
+            }
+
             $session = Injector::inst()->get(HTTPRequest::class)->getSession();
-            $session->set('SavedCards.Message', 'Card updated successfully.');
+            $session->set('SavedCards.Message', $message);
         }
 
         // If this payment is for a standing order, link the saved card to it
@@ -350,7 +370,28 @@ class PaymentExpressGateway_PxPay extends PaymentGateway_GatewayHosted
             if ($order && $order->IsStandingOrder()) {
                 $order->SavedCardID = $savedCard->ID;
                 $order->write();
+
+                $result = $this->retryStandingOrder($order);
+                if ($result) {
+                    AccountPageController::setRetryMessage($result, $order, 'Card saved.');
+                }
             }
+        }
+    }
+
+    /**
+     * Retry today's failed standing order after a card change. Never lets a problem here break the payment response.
+     */
+    private function retryStandingOrder(StandingOrder $standingOrder): ?StandingOrderPlacementResult
+    {
+        try {
+            return StandingOrderPlacer::singleton()->retryIfEligible($standingOrder);
+        } catch (\Throwable $e) {
+            Injector::inst()->get(LoggerInterface::class)->error('Standing order retry after card change failed', [
+                'StandingOrderID' => $standingOrder->ID,
+                'Error' => $e->getMessage()
+            ]);
+            return null;
         }
     }
 }
