@@ -15,7 +15,6 @@ use SilverStripe\Core\Injector\Injector;
 use App\Web\SavedCardService;
 use App\Web\FieldpineApi;
 use App\Web\AccountPageController;
-use App\Web\StandingOrderPlacementResult;
 use App\Web\StandingOrderPlacer;
 use SwipeStripe\Order\StandingOrder;
 use SwipeStripe\Order\Order;
@@ -97,7 +96,7 @@ class PaymentExpressGateway_PxPay extends PaymentGateway_GatewayHosted
         $request->setUrlSuccess($this->returnURL);
 
         //Generate a unique identifier for the transaction
-        $request->setTxnId(uniqid('ID'));
+        $request->setTxnId(static::txnIdForPayment($this->paymentIdFromReturnURL()));
         $request->setTxnType('Auth');
 
         //Get encrypted URL from DPS to redirect the user to
@@ -267,6 +266,17 @@ class PaymentExpressGateway_PxPay extends PaymentGateway_GatewayHosted
         // get payment object
         $rp = Payment::get()->byId($paymentID);
 
+        // the response must be for the payment named in the URL, so a valid result token for one payment
+        // can't be replayed against another
+        $txnId = $response->get_element_text('TxnId');
+        if (!$rp || !static::txnIdMatchesPayment((string)$txnId, (int)$rp->ID)) {
+            Injector::inst()->get(LoggerInterface::class)->warning('PxPay response does not match payment', [
+                'PaymentID' => $paymentID,
+                'TxnId' => $txnId,
+            ]);
+            return new PaymentGateway_Incomplete();
+        }
+
         // get billing id and add to member
         $dpsBillingId = $response->get_element_text('DpsBillingId');
 
@@ -305,6 +315,29 @@ class PaymentExpressGateway_PxPay extends PaymentGateway_GatewayHosted
         } else {
             return new PaymentGateway_Incomplete();
         }
+    }
+
+    /**
+     * PxPay TxnId (max 16 characters) carrying the payment ID, e.g. "P27023-3f9a1c0b"
+     */
+    public static function txnIdForPayment(int $paymentID): string
+    {
+        $prefix = 'P' . $paymentID . '-';
+        return substr($prefix . bin2hex(random_bytes(8)), 0, 16);
+    }
+
+    public static function txnIdMatchesPayment(string $txnId, int $paymentID): bool
+    {
+        return $paymentID > 0 && str_starts_with($txnId, 'P' . $paymentID . '-');
+    }
+
+    /**
+     * The payment ID is the last segment of the return URL set by PaymentProcessor_GatewayHosted::capture()
+     */
+    protected function paymentIdFromReturnURL(): int
+    {
+        $path = (string)parse_url((string)$this->returnURL, PHP_URL_PATH);
+        return (int)basename(rtrim($path, '/'));
     }
 
     public function makeCheckRequest($request, $data)
@@ -352,12 +385,10 @@ class PaymentExpressGateway_PxPay extends PaymentGateway_GatewayHosted
                 'MemberID' => $member->ID
             ]);
             foreach ($standingOrders as $standingOrder) {
-                $result = $this->retryStandingOrder($standingOrder);
-                if ($result?->isPlaced()) {
-                    $message .= " Your standing order \"{$standingOrder->CartName()}\" has been placed for delivery on {$standingOrder->CurrentDeliveryDateNice()}.";
-                } elseif ($result?->isFailed()) {
-                    $message .= " The payment for your standing order \"{$standingOrder->CartName()}\" was declined again.";
-                }
+                $message .= $this->retryStandingOrder($standingOrder, function ($result) use ($standingOrder) {
+                    [$retryMessage] = AccountPageController::retryMessage($result, $standingOrder);
+                    return " {$standingOrder->CartName()}: $retryMessage";
+                });
             }
 
             $session = Injector::inst()->get(HTTPRequest::class)->getSession();
@@ -371,27 +402,28 @@ class PaymentExpressGateway_PxPay extends PaymentGateway_GatewayHosted
                 $order->SavedCardID = $savedCard->ID;
                 $order->write();
 
-                $result = $this->retryStandingOrder($order);
-                if ($result) {
+                $this->retryStandingOrder($order, function ($result) use ($order) {
                     AccountPageController::setRetryMessage($result, $order, 'Card saved.');
-                }
+                });
             }
         }
     }
 
     /**
-     * Retry today's failed standing order after a card change. Never lets a problem here break the payment response.
+     * Retry today's failed standing order after a card change, then pass the result to $onResult (only if a retry
+     * happened). Never lets a problem here break the payment response.
      */
-    private function retryStandingOrder(StandingOrder $standingOrder): ?StandingOrderPlacementResult
+    private function retryStandingOrder(StandingOrder $standingOrder, callable $onResult): string
     {
         try {
-            return StandingOrderPlacer::singleton()->retryIfEligible($standingOrder);
+            $result = StandingOrderPlacer::singleton()->retryIfEligible($standingOrder);
+            return $result ? (string)$onResult($result) : '';
         } catch (\Throwable $e) {
             Injector::inst()->get(LoggerInterface::class)->error('Standing order retry after card change failed', [
                 'StandingOrderID' => $standingOrder->ID,
                 'Error' => $e->getMessage()
             ]);
-            return null;
+            return '';
         }
     }
 }
